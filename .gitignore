@@ -1,0 +1,17 @@
+
+# Emacs temp files
+*~
+
+# Silver-related files
+build.xml
+*.copperdump.html
+*.jar
+
+# Other files
+generated/
+*.c
+*.i
+*.o
+*.so
+*.a
+*.out

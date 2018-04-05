@@ -1,0 +1,31 @@
+#include <search.xh>
+
+#ifndef _SOLITARE_H
+#define _SOLITARE_H
+
+typedef struct move {
+  unsigned from, to;
+} move_t;
+
+typedef const struct state {
+  unsigned index;
+  struct state_impl *impl;
+} state_t;
+
+state_t init_state(unsigned edge_size);
+void delete_state(state_t state);
+void print_state(state_t state);
+_Bool is_solved(state_t state);
+
+void print_move(move_t move);
+state_t make_move(move_t move, state_t state);
+search move_t moves(state_t state);
+
+typedef struct solution {
+  size_t num_moves;
+  move_t *moves;
+} solution_t;
+
+search solution_t solve(state_t state);
+
+#endif
