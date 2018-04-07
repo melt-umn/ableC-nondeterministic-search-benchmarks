@@ -1,6 +1,8 @@
 #include <solitare.xh>
+#include <refcount.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 #include <assert.h>
 #include <stdio.h>
 
@@ -18,8 +20,23 @@ struct state_impl {
   bool occupied[];
 };
 
-void do_move(move_t move, bool *occupied) {}
-void undo_move(move_t move, bool *occupied) {}
+void do_move(move_t move, bool *occupied) {
+  assert(occupied[move.from]);
+  assert(!occupied[move.to]);
+  assert(occupied[move.removed]);
+  occupied[move.to] = true;
+  occupied[move.from] = false;
+  occupied[move.removed] = false;
+}
+
+void undo_move(move_t move, bool *occupied) {
+  assert(!occupied[move.from]);
+  assert(occupied[move.to]);
+  assert(!occupied[move.removed]);
+  occupied[move.to] = false;
+  occupied[move.from] = true;
+  occupied[move.removed] = false;
+}
 
 struct state_impl *demand_index(struct state_impl *state_impl, unsigned index) {
   assert(index <= state_impl->frames_size);
@@ -103,8 +120,75 @@ state_t make_move(move_t move, state_t state) {
   return (state_t){new_index, new_state_impl};
 }
 
-search move_t moves(state_t state) {
+union rows {
+  struct row {signed num, start, end;} arr[5];
+  struct {
+    struct row prev_2;
+    struct row prev_1;
+    struct row curr;
+    struct row next_1;
+    struct row next_2;
+  };
+};
+search move_t possible_move(unsigned from) {
+  unsigned row_num = floor((sqrt(1 + 8 * from) - 1) / 2);
+  union rows rows;
+  for (unsigned i = 0; i < 5; i++) {
+    rows.arr[i].num = row_num + i - 2;
+    rows.arr[i].start = rows.arr[i].num * (rows.arr[i].num + 1) / 2;
+    rows.arr[i].end = rows.arr[i].start + rows.arr[i].num - 1;
+  }
+  unsigned col_num = from - rows.curr.start;
   
+  choice {
+    {
+      require rows.prev_2.start > 0;
+      signed to = rows.prev_2.start + col_num - 2;
+      require to >= rows.curr.start;
+      signed removed = rows.prev_1.start + col_num - 1;
+      succeed ((move_t){from, to, removed});
+    }
+    {
+      require rows.prev_2.start > 0;
+      signed to = rows.prev_2.start + col_num;
+      require to <= rows.curr.end;
+      signed removed = rows.prev_1.start + col_num;
+      succeed ((move_t){from, to, removed});
+    }
+    {
+      signed to = from - 2;
+      require to >= rows.curr.start;
+      signed removed = from - 1;
+      succeed ((move_t){from, to, removed});
+    }
+    {
+      unsigned to = from + 2;
+      require to <= rows.curr.end;
+      unsigned removed = from + 1;
+      succeed ((move_t){from, to, removed});
+    }
+    {
+      unsigned to = rows.next_2.start + col_num;
+      unsigned removed = rows.next_1.start + col_num;
+      succeed ((move_t){from, to, removed});
+    }
+    {
+      unsigned to = rows.next_2.start + col_num + 2;
+      unsigned removed = rows.next_1.start + col_num + 1;
+      succeed ((move_t){from, to, removed});
+    }
+  }
+}
+
+search move_t valid_move(state_t state) {
+  choice for (unsigned from = 0; from < state.impl->size; from++) {
+    require state.impl->occupied[from];
+    choose move_t move = possible_move(from);
+    require move.to < state.impl->size;
+    require !state.impl->occupied[move.to];
+    require state.impl->occupied[move.removed];
+    succeed move;
+  }
 }
 
 void finalize_state(void *p) {
@@ -121,8 +205,8 @@ search solution_t solve(state_t state) {
     struct state *p_state = refcount_final_malloc(sizeof(state_t), &rt_state, 0, NULL, finalize_state);
     *p_state = state;
     
-    choose move_t move = moves(state)
-      finally {remove_ref(rt_state);}
+    choose move_t move = valid_move(state)
+      finally { remove_ref(rt_state); }
     rt_state;
     state_t new_state = make_move(move, state);
     
