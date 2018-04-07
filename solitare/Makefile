@@ -66,7 +66,7 @@ $(ABLEC_JAR): $(GRAMMAR_SOURCES)
 	java $(JAVAFLAGS) -jar $(ABLEC_JAR) $< $(XCFLAGS)
 
 $(TARGET): $(OBJECTS) $(SRC_SOURCES) | libs
-	$(CC) $(LDFLAGS) $< $(LOADLIBES) $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $(OBJECTS) $(LOADLIBES) $(LDLIBS) -o $@
 
 clean:
 	rm -f *~ *.i *.c *.o *.out *.jar *.copperdump.html build.xml

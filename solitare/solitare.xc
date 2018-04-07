@@ -1,4 +1,5 @@
 #include <solitare.xh>
+#include <search.xh>
 #include <refcount.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -97,10 +98,6 @@ void delete_state(state_t state) {
   }
 }
 
-void print_state(state_t state) {
-  
-}
-
 _Bool is_solved(state_t state) {
   return state.index == state.impl->size - 2; // Each move removes one peg
 }
@@ -130,7 +127,7 @@ union rows {
     struct row next_2;
   };
 };
-search move_t possible_move(unsigned from) {
+search move_t potential_move(unsigned from) {
   unsigned row_num = floor((sqrt(1 + 8 * from) - 1) / 2);
   union rows rows;
   for (unsigned i = 0; i < 5; i++) {
@@ -183,7 +180,7 @@ search move_t possible_move(unsigned from) {
 search move_t valid_move(state_t state) {
   choice for (unsigned from = 0; from < state.impl->size; from++) {
     require state.impl->occupied[from];
-    choose move_t move = possible_move(from);
+    choose move_t move = potential_move(from);
     require move.to < state.impl->size;
     require !state.impl->occupied[move.to];
     require state.impl->occupied[move.removed];
@@ -216,4 +213,43 @@ search solution_t solve(state_t state) {
   }
 }
 
-int main() {}
+void delete_solution(solution_t solution) {
+  free(solution.moves);
+}
+
+void print_state(state_t state) {
+  struct state_impl *new_state_impl = demand_index(state.impl, state.index);
+  unsigned edge_size = floor((sqrt(1 + 8 * new_state_impl->size) - 1) / 2);
+  unsigned i = 0;
+  for (unsigned row = 0; row < edge_size; row++) {
+    for (unsigned j = 0; j < edge_size - row; j++) {
+      printf("  ");
+    }
+    for (unsigned col = 0; col <= row; col++) {
+      if (new_state_impl->occupied[i]) {
+        printf(" \e[1m%-3d\e[0m", i);
+      } else {
+        printf(" \e[2m%-3d\e[0m", i);
+      }
+      i++;
+    }
+    printf("\n");
+  }
+}
+
+void print_move(move_t move) {
+  printf("%d -> %d, x%d\n", move.to, move.from, move.removed);
+}
+
+void print_solution(state_t state, solution_t solution) {
+  print_state(state);
+  for (size_t i = 0; i < solution.num_moves; i++) {
+    print_move(solution.moves[i]);
+    state_t new_state = make_move(solution.moves[i], state);
+    if (i > 0) {
+      delete_state(state);
+    }
+    state = new_state;
+    print_state(state);
+  }
+}

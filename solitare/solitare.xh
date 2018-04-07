@@ -1,23 +1,21 @@
 #include <search.xh>
 
-#ifndef _SOLITARE_H
-#define _SOLITARE_H
+#ifndef _SOLITARE_XH
+#define _SOLITARE_XH
 
 typedef struct move {
   unsigned from, to, removed;
 } move_t;
 
-typedef const struct state {
+typedef struct state {
   unsigned index;
   struct state_impl *impl;
 } state_t;
 
 state_t init_state(unsigned edge_size);
 void delete_state(state_t state);
-void print_state(state_t state);
 _Bool is_solved(state_t state);
 
-void print_move(move_t move);
 state_t make_move(move_t move, state_t state);
 search move_t valid_move(state_t state);
 
@@ -27,5 +25,10 @@ typedef struct solution {
 } solution_t;
 
 search solution_t solve(state_t state);
+void delete_solution(solution_t solution);
+
+void print_state(state_t state);
+void print_move(move_t move);
+void print_solution(state_t state, solution_t solution);
 
 #endif
