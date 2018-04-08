@@ -34,7 +34,7 @@ override XCFLAGS+=$(addprefix -I,$(XC_INCLUDE_DIRS))
 override JAVAFLAGS+=-Xss6M
 
 # Flags passed to the C compiler, e.g. to enable various compiler extensions
-override CFLAGS+=-g
+override CFLAGS+=
 
 # All directories contining extension libraries that may be linked
 LIB_DIRS=$(wildcard $(EXTS_BASE)/*/lib)
@@ -53,6 +53,12 @@ SRC_SOURCES=$(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.*c))
 
 all: $(ABLEC_JAR) $(C_FILES) $(OBJECTS) $(TARGET)
 
+dbg: CFLAGS+=-O0 -g -DDEBUG
+dbg: all
+
+rel: CFLAGS+=-O3 -DNDEBUG
+rel: all
+
 libs: $(LIBS)
 
 $(LIBS):
@@ -69,6 +75,9 @@ $(TARGET): $(OBJECTS) $(SRC_SOURCES) | libs
 	$(CC) $(LDFLAGS) $(OBJECTS) $(LOADLIBES) $(LDLIBS) -o $@
 
 clean:
-	rm -f *~ *.i *.c *.o *.out *.jar *.copperdump.html build.xml
+	rm -f *~ *.i *.c *.o *.out *.copperdump.html build.xml
+
+realclean: clean
+	rm -f *.jar
 
 .PHONY: all libs $(LIBS) clean
