@@ -10,12 +10,11 @@
 #define INITIAL_FRAMES_CAPACITY 10
 
 struct state_impl {
-  unsigned num_refs;
   unsigned frames_size;
   unsigned frames_capacity;
   struct history_frame {
     move_t move;
-    unsigned num_refs;
+    bool has_ref;
   } *frames;
   unsigned size;
   bool occupied[];
@@ -42,16 +41,18 @@ void undo_move(move_t move, bool *occupied) {
 struct state_impl *demand_index(struct state_impl *state_impl, unsigned index) {
   assert(index <= state_impl->frames_size);
   if (index == state_impl->frames_size) {
+    // We are demanding the most recent state, so the current state impl will do
     return state_impl;
   } else {
+    // We are demanding a previous state - copy the state impl and backtrack to the requested state
+    assert(state_impl->frames[index].has_ref);
     struct state_impl *new_state_impl =
       malloc(sizeof(struct state_impl) + sizeof(bool) * state_impl->size);
-    new_state_impl->num_refs = 1;
     new_state_impl->frames_size = index;
     new_state_impl->frames_capacity = state_impl->frames_capacity;
     new_state_impl->frames = malloc(sizeof(struct history_frame) * new_state_impl->frames_capacity);
     for (unsigned i = 0; i < index; i++) {
-      new_state_impl->frames[i] = (struct history_frame){state_impl->frames[i].move, 1};
+      new_state_impl->frames[i] = (struct history_frame){state_impl->frames[i].move, false};
     }
     new_state_impl->size = state_impl->size;
     memcpy(new_state_impl->occupied, state_impl->occupied, sizeof(bool) * state_impl->size);
@@ -66,7 +67,6 @@ state_t init_state(unsigned edge_size) {
   unsigned size = edge_size * (edge_size - 1) / 2;
   struct state_impl *new_state_impl =
     malloc(sizeof(struct state_impl) + sizeof(bool) * size);
-  new_state_impl->num_refs = 1;
   new_state_impl->frames_size = 0;
   new_state_impl->frames_capacity = INITIAL_FRAMES_CAPACITY;
   new_state_impl->frames = malloc(sizeof(struct history_frame) * INITIAL_FRAMES_CAPACITY);
@@ -81,20 +81,29 @@ state_t init_state(unsigned edge_size) {
 void delete_state(state_t state) {
   assert(state.index <= state.impl->frames_size);
   if (state.index == state.impl->frames_size) {
-    state.impl->num_refs--;
-    while (state.impl->num_refs == 0) {
-      if (state.impl->frames_size > 0) {
-        struct history_frame frame = state.impl->frames[--state.impl->frames_size];
-        undo_move(frame.move, state.impl->occupied);
-        state.impl->num_refs = frame.num_refs - 1;
-      } else {
-        free(state.impl->frames);
-        free(state.impl);
-        break;
+    // We are deleting the most recent state - look for a previous state with a reference
+    bool has_ref = false;
+    unsigned last_ref_index;
+    for (unsigned i = state.impl->frames_size - 1; i >= 0; i--) {
+      if (state.impl->frames[i].has_ref) {
+        has_ref = true;
+        last_ref_index = i;
       }
     }
+    if (has_ref) {
+      // If there is some previous previous state with a reference, backtrack to it
+      for (unsigned i = state.impl->frames_size - 1; i > last_ref_index; i--) {
+        undo_move(state.impl->frames[i].move, state.impl->occupied);
+      }
+      state.impl->frames_size = last_ref_index + 1;
+    } else {
+      // If no previous state has a reference, free the state impl
+      free(state.impl->frames);
+      free(state.impl);
+    }
   } else {
-    state.impl->frames[state.index].num_refs--;
+    // We are deleting a state after which additional moves have been made
+    state.impl->frames[state.index].has_ref = false;
   }
 }
 
@@ -103,18 +112,22 @@ _Bool is_solved(state_t state) {
 }
 
 state_t make_move(move_t move, state_t state) {
+  // Get a state impl representing the current state
   struct state_impl *new_state_impl = demand_index(state.impl, state.index);
   assert(new_state_impl->frames_capacity >= new_state_impl->frames_size);
+
+  // Expand the frame stack if it has insufficient capacity
   if (new_state_impl->frames_capacity == new_state_impl->frames_size) {
     new_state_impl->frames_capacity *= 2;
     new_state_impl->frames =
       realloc(new_state_impl->frames, sizeof(struct history_frame) * new_state_impl->frames_capacity);
   }
-  unsigned new_index = ++new_state_impl->frames_size;
-  new_state_impl->frames[state.index] = (struct history_frame){move, new_state_impl->num_refs};
-  new_state_impl->num_refs = 1;
+
+  // Perform and record the move
   do_move(move, new_state_impl->occupied);
-  return (state_t){new_index, new_state_impl};
+  new_state_impl->frames_size++;
+  new_state_impl->frames[state.index] = (struct history_frame){move, true};
+  return (state_t){state.index + 1, new_state_impl};
 }
 
 union rows {
