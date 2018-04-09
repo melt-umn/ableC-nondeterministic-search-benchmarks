@@ -94,8 +94,9 @@ static inline void remove_state_impl_ref(struct state_impl *state_impl) {
   }
 }
 
-state_t init_state(unsigned edge_size, unsigned empty) {
+state_t init_state(unsigned edge_size, unsigned empty_pos) {
   unsigned size = edge_size * (edge_size - 1) / 2;
+  assert(empty_pos < size);
   struct state_impl *state_impl = malloc(sizeof(struct state_impl) + sizeof(bool) * size);
   state_impl->num_refs = 1;
   state_impl->frames_size = 0;
@@ -105,7 +106,7 @@ state_t init_state(unsigned edge_size, unsigned empty) {
   for (unsigned i = 0; i < size; i++) {
     state_impl->occupied[i] = true;
   }
-  state_impl->occupied[empty] = false;
+  state_impl->occupied[empty_pos] = false;
   return (state_t){0, state_impl};
 }
 
@@ -124,13 +125,13 @@ void delete_state(state_t state) {
   }
 }
 
-bool is_solved(state_t state) {
-  return state.index == state.impl->size - 2; // Each move removes one peg
+bool is_solved(state_t state, unsigned num_left) {
+  return state.index + num_left == state.impl->size - 1; // Each move removes one peg
 }
 
-bool is_occupied(state_t state, unsigned loc) {
+bool is_occupied(state_t state, unsigned pos) {
   struct state_impl *state_impl = demand_index(state.impl, state.index);
-  bool result = state_impl->occupied[loc];
+  bool result = state_impl->occupied[pos];
   remove_state_impl_ref(state_impl);
   return result;
 }

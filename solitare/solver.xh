@@ -11,7 +11,7 @@ typedef struct solution {
   move_t *moves;
 } solution_t;
 
-search solution_t solve(state_t state);
+search solution_t solve(state_t state, unsigned num_left);
 void delete_solution(solution_t solution);
 
 void print_state(state_t state);

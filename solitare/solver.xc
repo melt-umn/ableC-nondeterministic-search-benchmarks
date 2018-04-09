@@ -79,8 +79,8 @@ void finalize_state(void *p) {
   delete_state(*(state_t *)p);
 }
 
-search solution_t solve_direct(state_t state) {
-  if (is_solved(state)) {
+search solution_t solve_direct(state_t state, unsigned num_left) {
+  if (is_solved(state, num_left)) {
     delete_state(state);
     size_t num_moves = state.index;
     succeed ((solution_t){num_moves, malloc(sizeof(move_t) * num_moves)});
@@ -96,15 +96,15 @@ search solution_t solve_direct(state_t state) {
     state_t new_state = make_move(move, state);
     //print_state(new_state);
     
-    choose solution_t solution = solve_direct(new_state);
+    choose solution_t solution = solve_direct(new_state, num_left);
     solution.moves[state.index] = move;
     
     succeed solution;
   }
 }
 
-search solution_t solve(state_t state) {
-  choose succeed solve_direct(copy_state(state));
+search solution_t solve(state_t state, unsigned num_left) {
+  choose succeed solve_direct(copy_state(state), num_left);
 }
 
 void delete_solution(solution_t solution) {
