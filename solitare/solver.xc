@@ -1,4 +1,4 @@
-#include <solitare.xh>
+#include <solver.xh>
 #include <search.xh>
 #include <refcount.h>
 #include <stdlib.h>
