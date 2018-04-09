@@ -15,21 +15,26 @@ GRAMMAR_SOURCES=$(shell find $(GRAMMAR_DIRS) -name *.sv -print0 | xargs -0)
 # Flags passed to silver including the appropriate directories
 override SVFLAGS+=$(addprefix -I ,$(GRAMMAR_DIRS))
 
+# The directory in which to place intermediate files
+BIN_DIR=bin
+
+# All C files to compile
+C_FILES=$(wildcard *.c)
 # All extended C files to compile
 XC_FILES=$(wildcard *.xc)
 # All C files that should be generated
-C_FILES=$(XC_FILES:.xc=.c)
+GEN_C_FILES=$(addprefix $(BIN_DIR)/,$(XC_FILES:.xc=.c))
 # All object files that should be generated
-OBJECTS=$(XC_FILES:.xc=.o)
+OBJECTS=$(addprefix $(BIN_DIR)/,$(C_FILES:.c=.o) $(XC_FILES:.xc=.o))
 # The executable that should be generated
-TARGET=solitare.out
+TARGET=$(BIN_DIR)/solitare
 
 # All directories contining extension header files that may be included
-XC_INCLUDE_DIRS=. $(wildcard $(EXTS_BASE)/*/include)
+INCLUDE_DIRS=. $(wildcard $(EXTS_BASE)/*/include)
 # All header files that may be included, to be included as dependencies
-XC_INCLUDE_SOURCES=$(foreach dir,$(XC_INCLUDE_DIRS),$(wildcard $(dir)/*.*h))
+INCLUDE_SOURCES=$(foreach dir,$(INCLUDE_DIRS),$(wildcard $(dir)/*.*h))
 # Flags passed to ableC including the appropriate directories
-override XCFLAGS+=$(addprefix -I,$(XC_INCLUDE_DIRS))
+override CPPFLAGS+=$(addprefix -I,$(INCLUDE_DIRS))
 # Flags passed to Java when invoking ableC
 override JAVAFLAGS+=-Xss6M
 
@@ -51,13 +56,14 @@ LIBS=$(SRC_DIRS:src=libs)
 # All C and XC files used to build libraries, to be included as dependencies
 SRC_SOURCES=$(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.*c))
 
-all: $(ABLEC_JAR) $(C_FILES) $(OBJECTS) $(TARGET)
+rel: CFLAGS+=-O3 -DNDEBUG
+rel: LDFLAGS+=-O3
+rel: all
 
 dbg: CFLAGS+=-O0 -g -DDEBUG
 dbg: all
 
-rel: CFLAGS+=-O3 -DNDEBUG
-rel: all
+all: $(ABLEC_JAR) $(GEN_C_FILES) $(OBJECTS) $(TARGET)
 
 libs: $(LIBS)
 
@@ -68,16 +74,24 @@ $(ABLEC_JAR): $(GRAMMAR_SOURCES)
 	touch $(wildcard $(ARTIFACT)/*.sv)
 	silver -o $@ $(SVFLAGS) $(ARTIFACT)
 
-%.c: %.xc $(XC_INCLUDE_SOURCES) $(ABLEC_JAR)
-	java $(JAVAFLAGS) -jar $(ABLEC_JAR) $< $(XCFLAGS)
+$(BIN_DIR)/%.c: %.xc $(INCLUDE_SOURCES) $(ABLEC_JAR) | $(BIN_DIR)
+	java $(JAVAFLAGS) -jar $(ABLEC_JAR) $< $(CPPFLAGS) $(XCFLAGS)
+	mv $*.i $@
+	mv $*.c $@
 
-$(TARGET): $(OBJECTS) $(SRC_SOURCES) | libs
+$(BIN_DIR)/%.o: %.c $(INCLUDE_SOURCES) | $(BIN_DIR)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+
+$(TARGET): $(OBJECTS) | libs
 	$(CC) $(LDFLAGS) $(OBJECTS) $(LOADLIBES) $(LDLIBS) -o $@
 
+$(BIN_DIR):
+	mkdir -p $@
+
 clean:
-	rm -f *~ *.i *.c *.o *.out *.copperdump.html build.xml
+	rm -rf *~ *.copperdump.html build.xml $(BIN_DIR)
 
 realclean: clean
-	rm -f *.jar
+	rm -rf *.jar
 
-.PHONY: all libs $(LIBS) clean
+.PHONY: all libs $(LIBS) clean realclean

@@ -1,22 +1,9 @@
 #include <search.xh>
+#include <state.h>
 
 #ifndef _SOLITARE_XH
 #define _SOLITARE_XH
 
-typedef struct move {
-  unsigned from, to, removed;
-} move_t;
-
-typedef struct state {
-  unsigned index;
-  struct state_impl *impl;
-} state_t;
-
-state_t init_state(unsigned edge_size);
-void delete_state(state_t state);
-_Bool is_solved(state_t state);
-
-state_t make_move(move_t move, state_t state);
 search move_t valid_move(state_t state);
 
 typedef struct solution {
