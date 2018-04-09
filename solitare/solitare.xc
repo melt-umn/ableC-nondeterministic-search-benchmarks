@@ -146,4 +146,7 @@ void print_solution(state_t state, solution_t solution) {
     state = new_state;
     print_state(state);
   }
+  if (solution.num_moves > 0) {
+    delete_state(state);
+  }
 }

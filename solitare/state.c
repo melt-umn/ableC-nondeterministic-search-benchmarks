@@ -82,7 +82,7 @@ static inline void remove_state_impl_ref(struct state_impl *state_impl) {
         // If there is some previous previous state with a reference, backtrack to it
         state_impl->num_refs = state_impl->frames[i].num_refs;
         for (int j = state_impl->frames_size - 1; j >= i; j--) {
-          undo_move(state_impl->frames[i].move, state_impl->occupied);
+          undo_move(state_impl->frames[j].move, state_impl->occupied);
         }
         state_impl->frames_size = i;
         return;
