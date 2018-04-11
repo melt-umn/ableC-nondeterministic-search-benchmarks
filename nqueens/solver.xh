@@ -1,0 +1,21 @@
+#include <search.xh>
+#include <state.h>
+
+#ifndef _SOLVER_XH
+#define _SOLVER_XH
+
+search move_t valid_move(state_t state);
+
+typedef struct solution {
+  size_t num_moves;
+  move_t *moves;
+} solution_t;
+
+search solution_t solve(state_t state);
+void delete_solution(solution_t solution);
+
+void print_state(state_t state);
+void print_move(move_t move);
+void print_solution(state_t state, solution_t solution);
+
+#endif
