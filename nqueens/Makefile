@@ -82,7 +82,7 @@ $(BIN_DIR)/%.c: %.xc $(INCLUDE_SOURCES) $(ABLEC_JAR) | $(BIN_DIR)
 $(BIN_DIR)/%.o: %.c $(INCLUDE_SOURCES) | $(BIN_DIR)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
-$(TARGET): $(OBJECTS) | libs
+$(TARGET): $(OBJECTS) $(SRC_SOURCES) | libs
 	$(CC) $(LDFLAGS) $(OBJECTS) $(LOADLIBES) $(LDLIBS) -o $@
 
 $(BIN_DIR):
@@ -94,4 +94,4 @@ clean:
 realclean: clean
 	rm -rf *.jar
 
-.PHONY: all libs $(LIBS) clean realclean
+.PHONY: rel dbg all libs $(LIBS) clean realclean

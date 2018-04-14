@@ -21,7 +21,7 @@ int main(unsigned argc, char *argv[]) {
     driver = argv[2];
   }
   
-  solution_t solution;
+  state_t solution;
   bool success;
   if (!strcmp(driver, "seq")) {
     success = invoke(search_sequential, &solution, solve(state));
@@ -50,8 +50,8 @@ int main(unsigned argc, char *argv[]) {
   
   if (success) {
     printf("Found solution:\n");
-    print_solution(state, solution);
-    delete_solution(solution);
+    print_state(solution);
+    delete_state(solution);
   } else {
     printf("No solution\n");
   }

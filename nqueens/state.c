@@ -78,13 +78,15 @@ static inline struct state_impl *demand_index(struct state_impl *state_impl, uns
 
 /**
  * Remove a reference to the current state of a state impl, possibly deleting the state impl if no
- * references remain.  
+ * references remain.  Invariant: The given state impl is locked by the current thread, and is
+ * unlocked by this function.
  *
  * @param state_impl The state impl for which to remove a reference, which should be locked by the
  * current thread.
  */
 static inline void remove_state_impl_ref(struct state_impl *state_impl) {
   state_impl->num_refs--;
+  bool has_ref = false;
   if (state_impl->num_refs == 0) {
     // Look for a previous state with a reference
     for (int i = state_impl->frames_size - 1; i >= 0; i--) {
@@ -95,11 +97,17 @@ static inline void remove_state_impl_ref(struct state_impl *state_impl) {
           undo_move(state_impl->frames[j].move, state_impl->size, state_impl->occupied);
         }
         state_impl->frames_size = i;
-        return;
+        has_ref = true;
+        break;
       }
     }
-    // If no previous state has a reference, free the state impl
-    pthread_mutex_unlock(&state_impl->mutex);
+  } else {
+    has_ref = true;
+  }
+
+  pthread_mutex_unlock(&state_impl->mutex);
+  if (!has_ref) {
+    // If neither the current nor previous state has a reference, free the state impl
     pthread_mutex_destroy(&state_impl->mutex);
     free(state_impl->frames);
     free(state_impl);
@@ -114,7 +122,7 @@ state_t init_state(unsigned size) {
   state_impl->frames_capacity = INITIAL_FRAMES_CAPACITY;
   state_impl->frames = malloc(sizeof(struct history_frame) * INITIAL_FRAMES_CAPACITY);
   state_impl->size = size;
-  for (unsigned i = 0; i < size; i++) {
+  for (unsigned i = 0; i < size * size; i++) {
     state_impl->occupied[i] = false;
   }
   return (state_t){0, state_impl};
@@ -122,8 +130,9 @@ state_t init_state(unsigned size) {
 
 state_t copy_state(state_t state) {
   pthread_mutex_lock(&state.impl->mutex);
-  state_t result = {state.index, demand_index(state.impl, state.index)};
-  pthread_mutex_unlock(&state.impl->mutex);
+  struct state_impl *state_impl = demand_index(state.impl, state.index);
+  state_t result = {state.index, state_impl};
+  pthread_mutex_unlock(&state_impl->mutex);
   return result;
 }
 
@@ -136,8 +145,8 @@ void delete_state(state_t state) {
   } else {
     // We are deleting a state after which additional moves have been made
     state.impl->frames[state.index].num_refs--;
+    pthread_mutex_unlock(&state.impl->mutex);
   }
-  pthread_mutex_unlock(&state.impl->mutex);
 }
 
 state_t make_move(move_t move, state_t state) {
@@ -173,7 +182,6 @@ bool is_occupied(state_t state, unsigned row, unsigned col) {
   struct state_impl *state_impl = demand_index(state.impl, state.index);
   bool result = ((bool (*)[size])state_impl->occupied)[row][col];
   remove_state_impl_ref(state_impl);
-  pthread_mutex_unlock(&state.impl->mutex);
   return result;
 }
 

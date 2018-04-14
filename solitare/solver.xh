@@ -1,8 +1,8 @@
 #include <search.xh>
 #include <state.h>
 
-#ifndef _SOLITARE_XH
-#define _SOLITARE_XH
+#ifndef _SOLVER_XH
+#define _SOLVER_XH
 
 search move_t valid_move(state_t state);
 
