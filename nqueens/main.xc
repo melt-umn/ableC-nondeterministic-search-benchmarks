@@ -5,6 +5,8 @@
 #include <stdio.h>
 
 int main(unsigned argc, char *argv[]) {
+  srand(12345);
+  
   int size = 6;
   if (argc > 1) {
     size = atoi(argv[1]);
@@ -14,11 +16,33 @@ int main(unsigned argc, char *argv[]) {
     return 1;
   }
   state_t state = init_state(size);
-  //print_state(state);
+  int num_initial = 2;
+  if (argc > 2) {
+    num_initial = atoi(argv[2]);
+  }
+  if (num_initial < 0 || num_initial > size) {
+    fprintf(stderr, "Invalid number of initial queens %d\n", num_initial);
+    return 1;
+  }
+  for (unsigned i = 0; i < num_initial; i++) {
+    unsigned row, col;
+    do {
+      do {
+        row = rand() % size;
+      } while (row_taken(state, row));
+      do {
+        col = rand() % size;
+      } while (col_taken(state, col));
+    } while (diag_taken(state, row, col));
+    state_t old_state = state;
+    state = make_move((move_t){row, col}, state);
+    delete_state(old_state);
+  }
+  print_state(state);
 
   char *driver = "seq";
-  if (argc > 2) {
-    driver = argv[2];
+  if (argc > 3) {
+    driver = argv[3];
   }
   
   state_t solution;
@@ -26,17 +50,17 @@ int main(unsigned argc, char *argv[]) {
   if (!strcmp(driver, "seq")) {
     success = invoke(search_sequential, &solution, solve(state));
   } else if (!strcmp(driver, "spawn")) {
-    int initial_depth = 5;
-    if (argc > 3) {
-      initial_depth = atoi(argv[3]);
+    int initial_depth = 2;
+    if (argc > 4) {
+      initial_depth = atoi(argv[4]);
     }
     if (initial_depth < 0) {
       fprintf(stderr, "Invalid initial depth %d\n", initial_depth);
       return 1;
     }
     int num_threads = 8;
-    if (argc > 4) {
-      num_threads = atoi(argv[4]);
+    if (argc > 5) {
+      num_threads = atoi(argv[5]);
     }
     if (num_threads < 1) {
       fprintf(stderr, "Invalid # of threads %d\n", num_threads);
