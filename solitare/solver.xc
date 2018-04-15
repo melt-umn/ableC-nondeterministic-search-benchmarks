@@ -1,6 +1,5 @@
 #include <solver.xh>
 #include <search.xh>
-#include <refcount.h>
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
@@ -66,45 +65,33 @@ search move_t potential_move(unsigned from) {
 }
 
 search move_t valid_move(state_t state) {
-  choose signed from = range(0, get_size(state));
+  choose signed from = range(0, state.size);
   require is_occupied(state, from);
   choose move_t move = potential_move(from);
-  require move.to < get_size(state);
+  require move.to < state.size;
   require !is_occupied(state, move.to);
   require is_occupied(state, move.removed);
   succeed move;
 }
 
-void finalize_state(void *p) {
-  delete_state(*(state_t *)p);
-}
-
-search solution_t solve_direct(state_t state, unsigned num_left) {
-  if (is_solved(state, num_left)) {
-    delete_state(state);
-    size_t num_moves = state.index;
+search solution_t solve_help(state_t state, uint8_t num_left, size_t num_moves) {
+  if (state.num_occupied <= num_left) {
     succeed ((solution_t){num_moves, malloc(sizeof(move_t) * num_moves)});
   } else {
-    refcount_tag_t rt_state;
-    struct state *p_state = refcount_final_malloc(sizeof(state_t), &rt_state, 0, NULL, finalize_state);
-    *p_state = state;
-
-    choose move_t move = valid_move(state)
-      finally { remove_ref(rt_state); }
-    rt_state;
+    choose move_t move = valid_move(state);
     //print_move(move);
     state_t new_state = make_move(move, state);
     //print_state(new_state);
     
-    choose solution_t solution = solve_direct(new_state, num_left);
-    solution.moves[state.index] = move;
+    choose solution_t solution = solve_help(new_state, num_left, num_moves + 1);
+    solution.moves[num_moves] = move;
     
     succeed solution;
   }
 }
 
-search solution_t solve(state_t state, unsigned num_left) {
-  choose succeed solve_direct(copy_state(state), num_left);
+search solution_t solve(state_t state, uint8_t num_left) {
+  choose succeed solve_help(state, num_left, 0);
 }
 
 void delete_solution(solution_t solution) {
@@ -139,14 +126,7 @@ void print_solution(state_t state, solution_t solution) {
   for (size_t i = 0; i < solution.num_moves; i++) {
     printf("\n");
     print_move(solution.moves[i]);
-    state_t new_state = make_move(solution.moves[i], state);
-    if (i > 0) {
-      delete_state(state);
-    }
-    state = new_state;
+    state = make_move(solution.moves[i], state);
     print_state(state);
-  }
-  if (solution.num_moves > 0) {
-    delete_state(state);
   }
 }

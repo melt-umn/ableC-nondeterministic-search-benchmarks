@@ -1,192 +1,33 @@
 #include <state.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdbool.h>
-#include <pthread.h>
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>
 
-#define INITIAL_FRAMES_CAPACITY 10
-
-struct state_impl {
-  pthread_mutex_t mutex;
-  unsigned num_refs;
-  unsigned frames_size;
-  unsigned frames_capacity;
-  struct history_frame {
-    move_t move;
-    unsigned num_refs;
-  } *frames;
-  unsigned size;
-  bool occupied[];
-};
-
-static inline void do_move(move_t move, bool *occupied) {
-  assert(occupied[move.from]);
-  assert(!occupied[move.to]);
-  assert(occupied[move.removed]);
-  occupied[move.to] = true;
-  occupied[move.from] = false;
-  occupied[move.removed] = false;
-}
-
-static inline void undo_move(move_t move, bool *occupied) {
-  assert(!occupied[move.from]);
-  assert(occupied[move.to]);
-  assert(!occupied[move.removed]);
-  occupied[move.to] = false;
-  occupied[move.from] = true;
-  occupied[move.removed] = true;
-}
-
-/**
- * Get a state impl with its current state as the state at any past instance, copying the state impl
- * if needed.  Invariant: The given and returned state impls are both locked by the current thread.
- *
- * @param state_impl The state impl to from which to demand the index.
- * @param index The index to demand.
- * @return The given state impl or a copy, representing the state at the given index.
- */
-static inline struct state_impl *demand_index(struct state_impl *state_impl, unsigned index) {
-  assert(index <= state_impl->frames_size);
-  if (index == state_impl->frames_size) {
-    // We are demanding the most recent state, so the current state impl will do
-    state_impl->num_refs++;
-    return state_impl;
-  } else {
-    // We are demanding a previous state - copy the state impl and backtrack to the requested state
-    assert(state_impl->frames[index].num_refs > 0);
-    struct state_impl *new_state_impl =
-      malloc(sizeof(struct state_impl) + sizeof(bool) * state_impl->size);
-    pthread_mutex_init(&new_state_impl->mutex, NULL);
-    pthread_mutex_lock(&new_state_impl->mutex);
-    new_state_impl->num_refs = 1;
-    new_state_impl->frames_size = index;
-    new_state_impl->frames_capacity = state_impl->frames_capacity;
-    new_state_impl->frames = malloc(sizeof(struct history_frame) * new_state_impl->frames_capacity);
-    for (unsigned i = 0; i < index; i++) {
-      new_state_impl->frames[i] = (struct history_frame){state_impl->frames[i].move, 0};
-    }
-    new_state_impl->size = state_impl->size;
-    memcpy(new_state_impl->occupied, state_impl->occupied, sizeof(bool) * state_impl->size);
-    for (int i = state_impl->frames_size - 1; i >= (signed)index; i--) {
-      undo_move(state_impl->frames[i].move, new_state_impl->occupied);
-    }
-    pthread_mutex_unlock(&state_impl->mutex);
-    return new_state_impl;
-  }
-}
-
-/**
- * Remove a reference to the current state of a state impl, possibly deleting the state impl if no
- * references remain.  
- *
- * @param state_impl The state impl for which to remove a reference, which should be locked by the
- * current thread.
- */
-static inline void remove_state_impl_ref(struct state_impl *state_impl) {
-  state_impl->num_refs--;
-  if (state_impl->num_refs == 0) {
-    // Look for a previous state with a reference
-    for (int i = state_impl->frames_size - 1; i >= 0; i--) {
-      if (state_impl->frames[i].num_refs > 0) {
-        // If there is some previous previous state with a reference, backtrack to it
-        state_impl->num_refs = state_impl->frames[i].num_refs;
-        for (int j = state_impl->frames_size - 1; j >= i; j--) {
-          undo_move(state_impl->frames[j].move, state_impl->occupied);
-        }
-        state_impl->frames_size = i;
-        return;
-      }
-    }
-    // If no previous state has a reference, free the state impl
-    pthread_mutex_unlock(&state_impl->mutex);
-    pthread_mutex_destroy(&state_impl->mutex);
-    free(state_impl->frames);
-    free(state_impl);
-  }
-}
-
-state_t init_state(unsigned edge_size, unsigned empty_pos) {
-  unsigned size = edge_size * (edge_size - 1) / 2;
-  assert(empty_pos < size);
-  struct state_impl *state_impl = malloc(sizeof(struct state_impl) + sizeof(bool) * size);
-  pthread_mutex_init(&state_impl->mutex, NULL);
-  state_impl->num_refs = 1;
-  state_impl->frames_size = 0;
-  state_impl->frames_capacity = INITIAL_FRAMES_CAPACITY;
-  state_impl->frames = malloc(sizeof(struct history_frame) * INITIAL_FRAMES_CAPACITY);
-  state_impl->size = size;
-  for (unsigned i = 0; i < size; i++) {
-    state_impl->occupied[i] = true;
-  }
-  state_impl->occupied[empty_pos] = false;
-  return (state_t){0, state_impl};
-}
-
-state_t copy_state(state_t state) {
-  pthread_mutex_lock(&state.impl->mutex);
-  state_t result = {state.index, demand_index(state.impl, state.index)};
-  pthread_mutex_unlock(&state.impl->mutex);
-  return result;
-}
-
-void delete_state(state_t state) {
-  pthread_mutex_lock(&state.impl->mutex);
-  assert(state.index <= state.impl->frames_size);
-  if (state.index == state.impl->frames_size) {
-    // We are deleting the most recent state
-    remove_state_impl_ref(state.impl);
-  } else {
-    // We are deleting a state after which additional moves have been made
-    state.impl->frames[state.index].num_refs--;
-  }
-  pthread_mutex_unlock(&state.impl->mutex);
+state_t init_state(uint8_t edge_size, uint8_t empty_pos) {
+  uint8_t size = edge_size * (edge_size + 1) / 2;
+  assert(size <= 64);
+  return (state_t){size, size - 1, ~(1ull << empty_pos)};
 }
 
 state_t make_move(move_t move, state_t state) {
-  pthread_mutex_lock(&state.impl->mutex);
-  
-  // Get a state impl representing the current state
-  struct state_impl *state_impl = demand_index(state.impl, state.index);
-
-  // Expand the frame stack if it has insufficient capacity
-  assert(state_impl->frames_capacity >= state_impl->frames_size);
-  if (state_impl->frames_capacity == state_impl->frames_size) {
-    state_impl->frames_capacity *= 2;
-    state_impl->frames =
-      realloc(state_impl->frames, sizeof(struct history_frame) * state_impl->frames_capacity);
-  }
-
-  // Perform and record the move
-  state_impl->frames_size++;
-  state_impl->frames[state.index] = (struct history_frame){move, state_impl->num_refs - 1};
-  state_impl->num_refs = 1;
-  do_move(move, state_impl->occupied);
-  
-  pthread_mutex_unlock(&state_impl->mutex);
-  
-  return (state_t){state.index + 1, state_impl};
+  assert(move.from < state.size);
+  assert(move.to < state.size);
+  assert(move.removed < state.size);
+  assert(state.occupied & 1ull << move.from);
+  assert(!(state.occupied & 1ull << move.to));
+  assert(state.occupied & 1ull << move.removed);
+  uint64_t occupied = (state.occupied & ~(1ull << move.from | 1ull << move.removed)) | 1ull << move.to;
+  return (state_t){state.size, state.num_occupied - 1, occupied};
 }
 
-bool is_occupied(state_t state, unsigned pos) {
-  pthread_mutex_lock(&state.impl->mutex);
-  struct state_impl *state_impl = demand_index(state.impl, state.index);
-  bool result = state_impl->occupied[pos];
-  remove_state_impl_ref(state_impl);
-  pthread_mutex_unlock(&state.impl->mutex);
-  return result;
-}
-
-unsigned get_size(state_t state) {
-  return state.impl->size;
+bool is_occupied(state_t state, uint8_t pos) {
+  return (state.occupied & 1ull << pos) != 0;
 }
 
 unsigned get_edge_size(state_t state) {
-  return floor((sqrt(1 + 8 * get_size(state)) - 1) / 2);
-}
-
-bool is_solved(state_t state, unsigned num_left) {
-  return state.index + num_left == get_size(state) - 1; // Each move removes one peg
+  return floor((sqrt(1 + 8 * state.size) - 1) / 2);
 }

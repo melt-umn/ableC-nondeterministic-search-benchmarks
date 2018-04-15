@@ -94,4 +94,4 @@ clean:
 realclean: clean
 	rm -rf *.jar
 
-.PHONY: all libs $(LIBS) clean realclean
+.PHONY: rel dbg all libs $(LIBS) clean realclean
