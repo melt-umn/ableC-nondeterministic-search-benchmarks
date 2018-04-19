@@ -1,0 +1,9 @@
+#include <search.xh>
+#include <formula.h>
+
+#ifndef _SOLVER_XH
+#define _SOLVER_XH
+
+search _Bool *solve(formula_t);
+
+#endif
