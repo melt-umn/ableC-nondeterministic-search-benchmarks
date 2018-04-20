@@ -15,15 +15,19 @@ search static inline bool maybe(void) {
 
 search bool *solve_sorted(size_t num_assignments, var_t *sorted_vars, formula_t formula) {
   if (formula.size == 0) {
+    // All clauses are satisfied, since none remain
     succeed malloc(formula.num_vars * sizeof(bool));
+  } else if (num_assignments == formula.num_vars) {
+    // We have assigned all vars, but there must still be some empty (unsatisfiable) clauses
+    fail;
   } else {
     assert(num_assignments < formula.num_vars);
     
     choose bool val = maybe();
+    var_t var = sorted_vars[num_assignments];
     refcount_tag_t rt_new_clauses;
     clause_t *new_clauses = refcount_malloc(formula.size * sizeof(clause_t), &rt_new_clauses);
     size_t num_new_clauses = 0;
-    var_t var = sorted_vars[num_assignments];
     bool failed = false;
     for (size_t i = 0; i < formula.size; i++) {
       clause_t clause = formula.clauses[i];
@@ -50,6 +54,8 @@ search bool *solve_sorted(size_t num_assignments, var_t *sorted_vars, formula_t 
 
     require !failed;
     formula_t new_formula = (formula_t){formula.num_vars, num_new_clauses, new_clauses};
+    //printf("a%u <- %s\n", var, val? "true" : "false");
+    //print_formula(new_formula);
 
     choose bool *result = solve_sorted(num_assignments + 1, sorted_vars, new_formula)
       finally { remove_ref(rt_new_clauses); }
@@ -61,36 +67,39 @@ search bool *solve_sorted(size_t num_assignments, var_t *sorted_vars, formula_t 
 }
 
 template<t>
-void qsort_by(size_t start, size_t end, t vals[], closure<(t) -> int> key) {
+void qsort_by(size_t start, size_t end, t vals[], closure<(t, t) -> int> cmp) {
   if (start < end) {
     // Partition
-    int pivot = key(vals[start]);
-    size_t i = start, j = end + 1;
-    while (i < j) {
-      do i++; while (key(vals[i]) <= pivot && i <= end);
-      do j--; while (key(vals[j]) > pivot);
+    t pivot = vals[start];
+    size_t i = start, j = end;
+    while (1) {
+      do i++; while (i < end && cmp(vals[i], pivot) <= 0);
+      do j--; while (cmp(vals[j], pivot) > 0);
+      if (i >= j) {
+        break;
+      }
       t tmp = vals[i];
       vals[i] = vals[j];
       vals[j] = tmp;
     }
     // Pivot goes in the middle
-    t tmp = vals[start];
     vals[start] = vals[j];
-    vals[j] = tmp;
+    vals[j] = pivot;
 
     // Sort halves recursively
-    inst qsort_by<t>(start, j - 1, vals, key);
-    inst qsort_by<t>(j + 1, end, vals, key);
+    inst qsort_by<t>(start, j, vals, cmp);
+    inst qsort_by<t>(j + 1, end, vals, cmp);
   }
 }
 
 search bool *solve(formula_t formula) {
   int keys[formula.num_vars];
+  memset(keys, 0, sizeof(keys));
   // Heuristic: Pick the literal first that occurs in the most clauses in the same quality
   for (size_t i = 0; i < formula.size; i++) {
     clause_t clause = formula.clauses[i];
     for (size_t j = 0; j < clause.size; j++) {
-      literal_t literal = clause.literals[i];
+      literal_t literal = clause.literals[j];
       if (literal.negated) {
         keys[literal.var]--;
       } else {
@@ -102,26 +111,53 @@ search bool *solve(formula_t formula) {
     keys[i] = formula.num_vars - abs(keys[i]);
   }
 
-  refcount_tag_t rt_sorted_vars, rt_sorted_clauses;
+  // Allocate memory
+  refcount_tag_t rt_sorted_vars, rt_sorted_clauses, rt_sorted_literals[formula.size];
   var_t *sorted_vars = refcount_malloc(formula.num_vars * sizeof(var_t), &rt_sorted_vars);
-  clause_t *sorted_clauses = refcount_malloc(formula.num_vars * sizeof(clause_t), &rt_sorted_clauses);
-  closure<(var_t) -> int> var_key = lambda (var_t var) -> (keys[var]);
-  inst qsort_by<var_t>(0, formula.num_vars, sorted_vars, var_key);
-  var_key.remove_ref();
-  closure<(literal_t) -> int> literal_key = lambda (literal_t literal) -> (keys[literal.var]);
   for (size_t i = 0; i < formula.size; i++) {
-    clause_t clause = sorted_clauses[i];
+    refcount_malloc(formula.clauses[i].size * sizeof(literal_t), rt_sorted_literals + i);
+  }
+  clause_t *sorted_clauses =
+    refcount_refs_malloc(formula.size * sizeof(clause_t), &rt_sorted_clauses, formula.size, rt_sorted_literals);
+
+  // Initialize sorted formula
+  for (size_t i = 0; i < formula.num_vars; i++) {
+    sorted_vars[i] = i;
+  }
+  closure<(var_t, var_t) -> int> cmp_var = lambda (var_t var1, var_t var2) -> (int) {
+    int key1 = keys[var1], key2 = keys[var2], diff = key1 - key2;
+    if (diff) {
+      return diff;
+    } else {
+      return var1 - var2;
+    }
+  };
+  closure<(literal_t, literal_t) -> int> cmp_literal =
+    lambda (literal_t literal1, literal_t literal2) -> (cmp_var(literal1.var, literal2.var));
+  inst qsort_by<var_t>(0, formula.num_vars, sorted_vars, cmp_var);
+  cmp_var.remove_ref();
+  for (size_t i = 0; i < formula.size; i++) {
+    clause_t clause = formula.clauses[i];
     sorted_clauses[i].size = clause.size;
-    literal_t *sorted_literals = malloc(clause.size * sizeof(literal_t));
+    literal_t *sorted_literals = rt_sorted_literals[i]->data;
     memcpy(sorted_literals, clause.literals, clause.size * sizeof(literal_t));
-    inst qsort_by<literal_t>(0, clause.size, sorted_literals, literal_key);
+    inst qsort_by<literal_t>(0, clause.size, sorted_literals, cmp_literal);
     sorted_clauses[i].literals = sorted_literals;
   }
+  cmp_literal.remove_ref();
   formula_t sorted_formula = (formula_t){formula.num_vars, formula.size, sorted_clauses};
-  literal_key.remove_ref();
+  //print_formula(sorted_formula);
 
+  // Search for a solution
   choose bool *result = solve_sorted(0, sorted_vars, sorted_formula)
-    finally { remove_ref(rt_sorted_vars); remove_ref(rt_sorted_clauses); }
+    finally {
+    remove_ref(rt_sorted_vars);
+    remove_ref(rt_sorted_clauses);
+    for (size_t i = 0; i < formula.size; i++) {
+      remove_ref(rt_sorted_literals[i]);
+    }
+  }
   rt_sorted_vars, rt_sorted_clauses;
+  
   succeed result;
 }
