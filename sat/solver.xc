@@ -15,11 +15,8 @@ search static inline bool maybe(void) {
 
 search bool *solve_sorted(size_t num_assignments, var_t *sorted_vars, formula_t formula) {
   if (formula.size == 0) {
-    // All clauses are satisfied, since none remain
+    // All clauses are satisfied, since the formula has no clauses
     succeed malloc(formula.num_vars * sizeof(bool));
-  } else if (num_assignments == formula.num_vars) {
-    // We have assigned all vars, but there must still be some empty (unsatisfiable) clauses
-    fail;
   } else {
     assert(num_assignments < formula.num_vars);
     
@@ -28,27 +25,28 @@ search bool *solve_sorted(size_t num_assignments, var_t *sorted_vars, formula_t 
     refcount_tag_t rt_new_clauses;
     clause_t *new_clauses = refcount_malloc(formula.size * sizeof(clause_t), &rt_new_clauses);
     size_t num_new_clauses = 0;
-    bool failed = false;
+    bool failed;
     for (size_t i = 0; i < formula.size; i++) {
       clause_t clause = formula.clauses[i];
-      if (clause.size == 0) {
-        // The clause is empty
-        failed = true;
-        break;
-      } else {
-        literal_t literal = clause.literals[0];
-        if (literal.var == var) {
-          // Clause contains the var
-          if (literal.negated == val) {
-            // Literal is false, keep the clause and remove the literal
-            new_clauses[num_new_clauses] = (clause_t){clause.size - 1, clause.literals + 1};
-            num_new_clauses++;
-          }
-        } else {
-          // Clause doesn't contain the var, it is unaffected
-          new_clauses[num_new_clauses] = clause;
+      failed = true;
+      for (size_t j = 0; j < clause.size; j++) {
+        literal_t literal = clause.literals[j];
+        if (literal.var != var) {
+          // Var doesn't occur (any more times) in the clause, keep the remaining literals
+          new_clauses[num_new_clauses] = (clause_t){clause.size - j, clause.literals + j};
           num_new_clauses++;
+          failed = false;
+          break;
+        } else if (literal.negated != val) {
+          // We have satisfied this clause, remove it
+          failed = false;
+          break;
         }
+      }
+      
+      if (failed) {
+        // The clause is empty, fail
+        break;
       }
     }
 
