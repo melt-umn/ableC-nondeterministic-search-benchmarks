@@ -25,6 +25,8 @@ literal_t literal(_Bool negated, var_t var);
 clause_t clause(size_t size, ...);
 formula_t formula(size_t num_vars, size_t size, ...);
 
+formula_t load_formula(const char *filename);
+
 void print_formula(formula_t formula);
 void delete_formula(formula_t formula);
 

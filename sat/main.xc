@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 int main(unsigned argc, char *argv[]) {
-  int option = 0;
+  /*  int option = 0;
   if (argc > 1) {
     option = atoi(argv[1]);
   }
@@ -30,10 +30,29 @@ int main(unsigned argc, char *argv[]) {
                 clause(3, literal(false, 0), literal(true, 1), literal(false, 2)),
                 clause(3, literal(false, 0), literal(true, 1), literal(true, 2)));
     break;
+  case 2:
+    f = formula(1, 1,
+                clause(2, literal(true, 0), literal(false, 0)));
+    break;
+  case 3:
+    f = formula(1, 2,
+                clause(1, literal(true, 0)),
+                clause(1, literal(false, 0)));
+    break;
   default:
     fprintf(stderr, "Invalid option %d\n", option);
     return 1;
+  }*/
+  
+  char *filename;
+  if (argc > 1) {
+    filename = argv[1];
+  } else {
+    fprintf(stderr, "Expected a filename to load\n");
+    exit(1);
   }
+  formula_t f = load_formula(filename);
+  
   print_formula(f);
 
   char *driver = "seq";
