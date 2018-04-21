@@ -67,6 +67,16 @@ int main(unsigned argc, char *argv[]) {
       return 1;
     }
     success = invoke(search_parallel_spawn(initial_depth, num_threads), &solution, solve(state));
+  } else if (!strcmp(driver, "steal")) {
+    int num_threads = 8;
+    if (argc > 4) {
+      num_threads = atoi(argv[4]);
+    }
+    if (num_threads < 1) {
+      fprintf(stderr, "Invalid # of threads %d\n", num_threads);
+      return 1;
+    }
+    success = invoke(search_parallel_steal(num_threads), &solution, solve(state));
   } else {
     fprintf(stderr, "Invalid search driver %s\n", driver);
     return 1;
