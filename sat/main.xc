@@ -4,53 +4,57 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+//#define HARDCODED_TESTS
+
 int main(unsigned argc, char *argv[]) {
-  // int option = 0;
-  // if (argc > 1) {
-  //   option = atoi(argv[1]);
-  // }
-  // formula_t f;
-  // switch (option) {
-  // case 0:
-  //   f = formula(4, 5,
-  //               clause(2, literal(false, 0), literal(true, 1)),
-  //               clause(2, literal(false, 1), literal(true, 2)),
-  //               clause(2, literal(false, 2), literal(true, 3)),
-  //               clause(2, literal(false, 3), literal(true, 0)),
-  //               clause(1, literal(false, 0)));
-  //   break;
-  // case 1:
-  //   f = formula(3, 8,
-  //               clause(3, literal(true, 0), literal(false, 1), literal(false, 2)),
-  //               clause(3, literal(true, 0), literal(false, 1), literal(true, 2)),
-  //               clause(3, literal(true, 0), literal(true, 1), literal(false, 2)),
-  //               clause(3, literal(true, 0), literal(true, 1), literal(true, 2)),
-  //               clause(3, literal(false, 0), literal(false, 1), literal(false, 2)),
-  //               clause(3, literal(false, 0), literal(false, 1), literal(true, 2)),
-  //               clause(3, literal(false, 0), literal(true, 1), literal(false, 2)),
-  //               clause(3, literal(false, 0), literal(true, 1), literal(true, 2)));
-  //   break;
-  // case 2:
-  //   f = formula(1, 1,
-  //               clause(2, literal(true, 0), literal(false, 0)));
-  //   break;
-  // case 3:
-  //   f = formula(1, 2,
-  //               clause(1, literal(true, 0)),
-  //               clause(1, literal(false, 0)));
-  //   break;
-  // case 4:
-  //   f = formula(4, 3,
-  //               clause(2, literal(false, 0), literal(false, 3)),
-  //               clause(2, literal(true, 0), literal(false, 1)),
-  //               clause(3, literal(false, 0), literal(true, 1), literal(false, 2)),
-  //               clause(3, literal(true, 0), literal(false, 1), literal(true, 2)));
-  //   break;
-  // default:
-  //   fprintf(stderr, "Invalid option %d\n", option);
-  //   return 1;
-  // }
-  
+#ifdef HARDCODED_TESTS
+  int option = 0;
+  if (argc > 1) {
+    option = atoi(argv[1]);
+  }
+  formula_t f;
+  switch (option) {
+  case 0:
+    f = formula(4, 5,
+                clause(2, literal(false, 0), literal(true, 1)),
+                clause(2, literal(false, 1), literal(true, 2)),
+                clause(2, literal(false, 2), literal(true, 3)),
+                clause(2, literal(false, 3), literal(true, 0)),
+                clause(1, literal(false, 0)));
+    break;
+  case 1:
+    f = formula(3, 8,
+                clause(3, literal(true, 0), literal(false, 1), literal(false, 2)),
+                clause(3, literal(true, 0), literal(false, 1), literal(true, 2)),
+                clause(3, literal(true, 0), literal(true, 1), literal(false, 2)),
+                clause(3, literal(true, 0), literal(true, 1), literal(true, 2)),
+                clause(3, literal(false, 0), literal(false, 1), literal(false, 2)),
+                clause(3, literal(false, 0), literal(false, 1), literal(true, 2)),
+                clause(3, literal(false, 0), literal(true, 1), literal(false, 2)),
+                clause(3, literal(false, 0), literal(true, 1), literal(true, 2)));
+    break;
+  case 2:
+    f = formula(1, 1,
+                clause(2, literal(true, 0), literal(false, 0)));
+    break;
+  case 3:
+    f = formula(1, 2,
+                clause(1, literal(true, 0)),
+                clause(1, literal(false, 0)));
+    break;
+  case 4:
+    f = formula(3, 4,
+                clause(2, literal(false, 0), literal(false, 3)),
+                clause(2, literal(true, 0), literal(false, 1)),
+                clause(3, literal(false, 0), literal(true, 1), literal(false, 2)),
+                clause(3, literal(true, 0), literal(false, 1), literal(true, 2)));
+    break;
+  default:
+    fprintf(stderr, "Invalid option %d\n", option);
+    return 1;
+  }
+
+#else
   char *filename;
   if (argc > 1) {
     filename = argv[1];
@@ -59,6 +63,7 @@ int main(unsigned argc, char *argv[]) {
     exit(1);
   }
   formula_t f = load_formula(filename);
+#endif
   
   print_formula(f);
 
@@ -72,7 +77,7 @@ int main(unsigned argc, char *argv[]) {
   if (!strcmp(driver, "seq")) {
     success = invoke(search_sequential, &assignment, solve(f));
   } else if (!strcmp(driver, "spawn")) {
-    int initial_depth = 5;
+    int initial_depth = 10;
     if (argc > 3) {
       initial_depth = atoi(argv[3]);
     }

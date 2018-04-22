@@ -92,19 +92,19 @@ formula_t load_formula(const char *filename) {
   } else {
     ungetc(c, file);
   }
-
+  
   // Read the problem line
   size_t num_vars, size;
   if (fscanf(file, "p%*[ ]cnf%*[ ]%lu%*[ ]%lu%*[ \n]", &num_vars, &size) != 2) {
     goto failure;
   }
-
+  
   // Read clauses
   clause_t *clauses = malloc(size * sizeof(clause_t));
   size_t current_clause = 0;
   size_t current_literals_size = 0, current_literals_capacity = INITIAL_LITERALS_CAPACITY;
-  literal_t *current_literals = malloc(current_literals_size * sizeof(literal_t));
-
+  literal_t *current_literals = malloc(INITIAL_LITERALS_CAPACITY * sizeof(literal_t));
+  
   int val;
   int status;
   while ((status = fscanf(file, "%d", &val)) != EOF) {
@@ -124,7 +124,7 @@ formula_t load_formula(const char *filename) {
     } else {
       ungetc(c, file);
     }
-
+    
     if (val == 0) {
       // This clause is complete
       sort_literals(0, current_literals_size, current_literals);
@@ -132,7 +132,7 @@ formula_t load_formula(const char *filename) {
       current_clause++;
       current_literals_size = 0;
       current_literals_capacity = INITIAL_LITERALS_CAPACITY;
-      current_literals = malloc(current_literals_size * sizeof(literal_t));
+      current_literals = malloc(INITIAL_LITERALS_CAPACITY * sizeof(literal_t));
     } else {
       // Add the var to the current clause
       if (current_clause >= size) {
@@ -140,7 +140,7 @@ formula_t load_formula(const char *filename) {
       }
       if (current_literals_size == current_literals_capacity) {
         current_literals_capacity *= 2;
-        current_literals = realloc(current_literals, current_literals_capacity);
+        current_literals = realloc(current_literals, current_literals_capacity * sizeof(literal_t));
       }
       current_literals[current_literals_size] = (literal_t){val < 0, abs(val) - 1};
       current_literals_size++;

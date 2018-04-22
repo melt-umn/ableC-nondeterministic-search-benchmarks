@@ -16,7 +16,9 @@ search static inline bool maybe(bool preference) {
 
 search bool *solve_reduced(formula_t formula);
 
-search bool *solve_copy(formula_t formula) {
+// Solve a formula that doesn not contain singular or empty clauses
+// Note that this function modifies the given formula
+search bool *solve_unreduced(formula_t formula) {
   // Eliminate all singular clauses
   bool failed = false;
   size_t num_assignments = 0;
@@ -25,6 +27,7 @@ search bool *solve_copy(formula_t formula) {
   refcount_tag_t rt_fresh_clause[formula.size];
   memset(rt_fresh_clause, 0, formula.size * sizeof(refcount_tag_t));
   while (1) {
+    // Find a singular clause to eliminate
     bool has_singular_clause = 0;
     literal_t singular_clause;
     for (size_t i = 0; i < formula.size; i++) {
@@ -38,14 +41,17 @@ search bool *solve_copy(formula_t formula) {
         break;
       }
     }
-    
+
+    // Exit the loop if none remain or an empty clause was found
     if (!has_singular_clause || failed) {
       break;
     }
-    
+
+    // Record the assignment made, to use later in reconstructing the result
     assignments[num_assignments] = singular_clause;
     num_assignments++;
-    
+
+    // Eliminate the chosen singular clauses
     size_t new_size = 0;
     for (size_t i = 0; i < formula.size; i++) {
       clause_t clause = formula.clauses[i];
@@ -69,11 +75,9 @@ search bool *solve_copy(formula_t formula) {
       
       if (literal_removed) {
         // If a var is to be removed, copy the clause excluding those literals
-        if (rt_fresh_clause[new_size] != NULL) {
-          remove_ref(rt_fresh_clause[new_size]);
-        }
+        refcount_tag_t rt_literals;
         literal_t *literals =
-          refcount_malloc(clause.size * sizeof(literal_t), rt_fresh_clause + new_size);
+          refcount_malloc(clause.size * sizeof(literal_t), &rt_literals);
         size_t size = 0;
         for (size_t j = 0; j < clause.size; j++) {
           literal_t literal = clause.literals[j];
@@ -82,8 +86,13 @@ search bool *solve_copy(formula_t formula) {
             size++;
           }
         }
+        if (rt_fresh_clause[new_size] != NULL) {
+          remove_ref(rt_fresh_clause[new_size]);
+        }
+        rt_fresh_clause[new_size] = rt_literals;
         clause = (clause_t){size, literals};
       } else {
+        // If the clause is kept intact, update its reference counting information appropriately
         if (rt_fresh_clause[i] != NULL) {
           add_ref(rt_fresh_clause[i]);
         }
@@ -107,9 +116,8 @@ search bool *solve_copy(formula_t formula) {
     formula.size = new_size;
     //print_formula(formula);
   }
-  
-  require !failed;
 
+  // Manage references to allocated clauses
   size_t num_fresh_clauses = 0;
   for (size_t i = 0; i < formula.size; i++) {
     if (rt_fresh_clause[i] != NULL) {
@@ -118,12 +126,16 @@ search bool *solve_copy(formula_t formula) {
     }
   }
   refcount_tag_t rt_fresh_clauses = refcount_wrap(1, num_fresh_clauses, rt_fresh_clause);
-  
-  choose bool *result = solve_reduced(formula)
+
+  // Require that the simplification did not result in empty clauses
+  require (!failed)
     finally { remove_ref(rt_assignments); remove_ref(rt_fresh_clauses); }
-  
+
+  // If the simplification didn't result in failure, recursively solve the now-reduced formula
+  choose bool *result = solve_reduced(formula);
   rt_assignments, rt_fresh_clauses;
-  
+
+  // Record the assignments made here in the resulting solution
   for (size_t i = 0; i < num_assignments; i++) {
     literal_t singular_clause = assignments[i];
     result[singular_clause.var] = !singular_clause.negated;
@@ -170,16 +182,20 @@ search bool *solve_reduced(formula_t formula) {
     // Prefer assignment of vars predominant quality
     choose bool val = maybe(max_weight > 0);
     size_t new_size = formula.size + 1;
-    refcount_tag_t rt_new_clauses;
-    clause_t *new_clauses = refcount_malloc(new_size * sizeof(clause_t), &rt_new_clauses);
-    new_clauses[0] = clause(1, literal(!val, var));
+    refcount_tag_t rt_new_literal, rt_new_clauses;
+    literal_t *new_literal = refcount_malloc(sizeof(literal_t), &rt_new_literal);
+    *new_literal = literal(!val, var);
+    clause_t *new_clauses =
+      refcount_refs_malloc(new_size * sizeof(clause_t), &rt_new_clauses, 1, &rt_new_literal);
+    remove_ref(rt_new_literal);
+    new_clauses[0] = (clause_t){1, new_literal};
     memcpy(new_clauses + 1, formula.clauses, formula.size * sizeof(clause_t));
     formula_t new_formula = (formula_t){formula.num_vars, new_size, new_clauses};
     //printf("a%u <- %s\n", var, val? "true" : "false");
     //print_formula(new_formula);
     
-    // Recursively solve the resulting formula
-    choose bool *result = solve_copy(new_formula)
+    // Recursively solve the resulting, non-reduced formula
+    choose bool *result = solve_unreduced(new_formula)
       finally { remove_ref(rt_new_clauses); }
     rt_new_clauses;
     result[var] = val;
@@ -189,10 +205,11 @@ search bool *solve_reduced(formula_t formula) {
 }
 
 search bool *solve(formula_t formula) {
+  // Make a copy of the formula that we can modify
   refcount_tag_t rt_clauses;
   clause_t *clauses = refcount_malloc(formula.size * sizeof(clause_t), &rt_clauses);
   memcpy(clauses, formula.clauses, formula.size * sizeof(clause_t));
-  choose bool *result = solve_copy((formula_t){formula.num_vars, formula.size, clauses})
+  choose bool *result = solve_unreduced((formula_t){formula.num_vars, formula.size, clauses})
     finally { remove_ref(rt_clauses); }
   rt_clauses;
   succeed result;
