@@ -1,10 +1,36 @@
 #include <formula.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
 
 #define INITIAL_LITERALS_CAPACITY 10
+
+void sort_literals(size_t start, size_t end, literal_t *literals) {
+  if (start < end) {
+    // Partition
+    literal_t pivot = literals[start];
+    size_t i = start, j = end;
+    while (1) {
+      do i++; while (i < end && literals[i].var <= pivot.var);
+      do j--; while (literals[j].var > pivot.var);
+      if (i >= j) {
+        break;
+      }
+      literal_t tmp = literals[i];
+      literals[i] = literals[j];
+      literals[j] = tmp;
+    }
+    // Pivot goes in the middle
+    literals[start] = literals[j];
+    literals[j] = pivot;
+    
+    // Sort halves recursively
+    sort_literals(start, j, literals);
+    sort_literals(j + 1, end, literals);
+  }
+}
 
 literal_t literal(bool negated, var_t var) {
   return (literal_t){negated, var};
@@ -19,6 +45,8 @@ clause_t clause(size_t size, ...) {
     literals[i] = va_arg(args, literal_t);
   }
   va_end(args);
+
+  sort_literals(0, size, literals);
 
   return (clause_t){size, literals};
 }
@@ -99,6 +127,7 @@ formula_t load_formula(const char *filename) {
 
     if (val == 0) {
       // This clause is complete
+      sort_literals(0, current_literals_size, current_literals);
       clauses[current_clause] = (clause_t){current_literals_size, current_literals};
       current_clause++;
       current_literals_size = 0;
@@ -117,9 +146,10 @@ formula_t load_formula(const char *filename) {
       current_literals_size++;
     }
   }
-
+  
  done:
   if (current_literals_size) {
+    sort_literals(0, current_literals_size, current_literals);
     clauses[current_clause] = (clause_t){current_literals_size, current_literals};
     current_clause++;
   }

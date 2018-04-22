@@ -14,7 +14,7 @@ import edu:umn:cs:melt:ableC:drivers:compile;
 parser extendedParser :: cst:Root {
   edu:umn:cs:melt:ableC:concretesyntax;
   edu:umn:cs:melt:exts:ableC:search;
-  edu:umn:cs:melt:exts:ableC:templating;
+  --edu:umn:cs:melt:exts:ableC:templating;
 } 
 
 function main
