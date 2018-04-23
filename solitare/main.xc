@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 int main(unsigned argc, char *argv[]) {
-  // (5, 1), (6, 0), (7, 4), (8, 0)
+  // (5, 1), (6, 0), (7, 4), (8, 0), (9, 1)
   int edge_size = 6;
   if (argc > 1) {
     edge_size = atoi(argv[1]);
@@ -18,7 +18,7 @@ int main(unsigned argc, char *argv[]) {
   if (argc > 2) {
     empty_pos = atoi(argv[2]);
   }
-  if (empty_pos < 0 || empty_pos > edge_size * (edge_size - 1) / 2) {
+  if (empty_pos < 0 || empty_pos > edge_size * (edge_size + 1) / 2) {
     fprintf(stderr, "Invalid initial empty position %d\n", empty_pos);
     return 1;
   }
@@ -34,7 +34,7 @@ int main(unsigned argc, char *argv[]) {
     return 1;
   }
 
-  char *driver = "seq";
+  char *driver = "steal";
   if (argc > 4) {
     driver = argv[4];
   }
@@ -61,6 +61,16 @@ int main(unsigned argc, char *argv[]) {
       return 1;
     }
     success = invoke(search_parallel_spawn(initial_depth, num_threads), &solution, solve(state, num_left));
+  } else if (!strcmp(driver, "steal")) {
+    int num_threads = 8;
+    if (argc > 5) {
+      num_threads = atoi(argv[5]);
+    }
+    if (num_threads < 1) {
+      fprintf(stderr, "Invalid # of threads %d\n", num_threads);
+      return 1;
+    }
+    success = invoke(search_parallel_steal(num_threads), &solution, solve(state, num_left));
   } else {
     fprintf(stderr, "Invalid search driver %s\n", driver);
     return 1;
