@@ -39,15 +39,17 @@ int main(unsigned argc, char *argv[]) {
     delete_state(old_state);
   }
   print_state(state);
-
-  char *driver = "seq";
+  
+  char *driver = "steal";
   if (argc > 3) {
     driver = argv[3];
   }
   
   state_t solution;
   bool success;
-  if (!strcmp(driver, "seq")) {
+  if (!strcmp(driver, "host")) {
+    success = solve_host(state, &solution);
+  } else if (!strcmp(driver, "seq")) {
     success = invoke(search_sequential, &solution, solve(state));
   } else if (!strcmp(driver, "spawn")) {
     int initial_depth = 2;
