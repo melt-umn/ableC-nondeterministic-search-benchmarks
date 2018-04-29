@@ -82,7 +82,7 @@ int main(unsigned argc, char *argv[]) {
       invoke(search_parallel_spawn(global_depth, thread_depth, num_threads),
              &solution, solve(state, num_left));
   } else if (!strcmp(driver, "steal")) {
-    int global_depth = 2;
+    int global_depth = 3;
     if (argc > 5) {
       global_depth = atoi(argv[5]);
     }
@@ -90,7 +90,7 @@ int main(unsigned argc, char *argv[]) {
       fprintf(stderr, "Invalid global depth %d\n", global_depth);
       return 1;
     }
-    int thread_depth = 5;
+    int thread_depth = 4;
     if (argc > 6) {
       thread_depth = atoi(argv[6]);
     }
