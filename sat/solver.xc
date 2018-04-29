@@ -178,7 +178,7 @@ search bool *solve_reduced(formula_t formula) {
       }
     }
     
-    // Nondeterministicly choose a value to assign by adding a singular clause
+    // Nondeterministically choose a value to assign by adding a singular clause
     // Prefer assignment of vars predominant quality
     choose bool val = maybe(max_weight > 0);
     size_t new_size = formula.size + 1;

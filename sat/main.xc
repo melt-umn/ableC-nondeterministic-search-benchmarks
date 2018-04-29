@@ -74,36 +74,72 @@ int main(unsigned argc, char *argv[]) {
 
   bool *assignment;
   bool success;
-  if (!strcmp(driver, "seq")) {
-    success = invoke(search_sequential, &assignment, solve(f));
+  if (!strcmp(driver, "dfs")) {
+    success = invoke(search_sequential_dfs, &assignment, solve(f));
+  } else if (!strcmp(driver, "seq")) {
+    int depth = 7;
+    if (argc > 5) {
+      depth = atoi(argv[3]);
+    }
+    if (depth < 0) {
+      fprintf(stderr, "Invalid depth %d\n", depth);
+      return 1;
+    }
+    success = invoke(search_sequential(depth), &assignment, solve(f));
   } else if (!strcmp(driver, "spawn")) {
-    int initial_depth = 10;
+    int global_depth = 10;
     if (argc > 3) {
-      initial_depth = atoi(argv[3]);
+      global_depth = atoi(argv[3]);
     }
-    if (initial_depth < 0) {
-      fprintf(stderr, "Invalid initial depth %d\n", initial_depth);
+    if (global_depth < 0) {
+      fprintf(stderr, "Invalid global depth %d\n", global_depth);
       return 1;
     }
-    int num_threads = 8;
+    int thread_depth = 0;
     if (argc > 4) {
-      num_threads = atoi(argv[4]);
+      thread_depth = atoi(argv[4]);
     }
-    if (num_threads < 1) {
-      fprintf(stderr, "Invalid # of threads %d\n", num_threads);
+    if (thread_depth < 0) {
+      fprintf(stderr, "Invalid thread depth %d\n", thread_depth);
       return 1;
     }
-    success = invoke(search_parallel_spawn(initial_depth, num_threads), &assignment, solve(f));
-  } else if (!strcmp(driver, "steal")) {
     int num_threads = 8;
-    if (argc > 3) {
-      num_threads = atoi(argv[3]);
+    if (argc > 5) {
+      num_threads = atoi(argv[5]);
     }
     if (num_threads < 1) {
       fprintf(stderr, "Invalid # of threads %d\n", num_threads);
       return 1;
     }
-    success = invoke(search_parallel_steal(num_threads), &assignment, solve(f));
+    success = invoke(search_parallel_spawn(global_depth, thread_depth, num_threads),
+                     &assignment, solve(f));
+  } else if (!strcmp(driver, "steal")) {
+    int global_depth = 10;
+    if (argc > 3) {
+      global_depth = atoi(argv[3]);
+    }
+    if (global_depth < 0) {
+      fprintf(stderr, "Invalid global depth %d\n", global_depth);
+      return 1;
+    }
+    int thread_depth = 0;
+    if (argc > 4) {
+      thread_depth = atoi(argv[4]);
+    }
+    if (thread_depth < 0) {
+      fprintf(stderr, "Invalid thread depth %d\n", thread_depth);
+      return 1;
+    }
+    int num_threads = 8;
+    if (argc > 5) {
+      num_threads = atoi(argv[5]);
+    }
+    if (num_threads < 1) {
+      fprintf(stderr, "Invalid # of threads %d\n", num_threads);
+      return 1;
+    }
+    success = invoke(search_parallel_steal(global_depth, thread_depth, num_threads),
+                     &assignment, solve(f));
   } else {
     fprintf(stderr, "Invalid search driver %s\n", driver);
     return 1;
