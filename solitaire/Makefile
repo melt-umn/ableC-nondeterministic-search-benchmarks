@@ -27,7 +27,7 @@ GEN_C_FILES=$(addprefix $(BIN_DIR)/,$(XC_FILES:.xc=.c))
 # All object files that should be generated
 OBJECTS=$(addprefix $(BIN_DIR)/,$(C_FILES:.c=.o) $(XC_FILES:.xc=.o))
 # The executable that should be generated
-TARGET=$(BIN_DIR)/solitare
+TARGET=$(BIN_DIR)/solitaire
 
 # All directories contining extension header files that may be included
 INCLUDE_DIRS=. $(wildcard $(EXTS_BASE)/*/include)
