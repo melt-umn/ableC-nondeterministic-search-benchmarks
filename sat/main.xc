@@ -67,7 +67,7 @@ int main(unsigned argc, char *argv[]) {
   
   print_formula(f);
 
-  char *driver = "seq";
+  char *driver = "spawn";
   if (argc > 2) {
     driver = argv[2];
   }
@@ -114,7 +114,7 @@ int main(unsigned argc, char *argv[]) {
     success = invoke(search_parallel_spawn(global_depth, thread_depth, num_threads),
                      &assignment, solve(f));
   } else if (!strcmp(driver, "steal")) {
-    int global_depth = 10;
+    int global_depth = 3;
     if (argc > 3) {
       global_depth = atoi(argv[3]);
     }
