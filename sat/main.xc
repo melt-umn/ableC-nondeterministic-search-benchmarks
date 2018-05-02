@@ -113,7 +113,7 @@ int main(unsigned argc, char *argv[]) {
     }
     success = invoke(search_parallel_spawn(global_depth, thread_depth, num_threads),
                      &assignment, solve(f));
-  } else if (!strcmp(driver, "steal")) {
+  } else if (!strcmp(driver, "share")) {
     int global_depth = 3;
     if (argc > 3) {
       global_depth = atoi(argv[3]);
@@ -138,7 +138,7 @@ int main(unsigned argc, char *argv[]) {
       fprintf(stderr, "Invalid # of threads %d\n", num_threads);
       return 1;
     }
-    success = invoke(search_parallel_steal(global_depth, thread_depth, num_threads),
+    success = invoke(search_parallel_share(global_depth, thread_depth, num_threads),
                      &assignment, solve(f));
   } else {
     fprintf(stderr, "Invalid search driver %s\n", driver);
