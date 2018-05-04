@@ -8,7 +8,7 @@ typedef struct move {
 } move_t;
 
 typedef struct state {
-  uint8_t size, num_occupied;
+  uint8_t size, num_occupied, num_removed;
   uint64_t occupied;
 } state_t;
 

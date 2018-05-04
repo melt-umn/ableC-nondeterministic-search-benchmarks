@@ -74,24 +74,20 @@ search move_t valid_move(state_t state) {
   succeed move;
 }
 
-search solution_t solve_help(state_t state, uint8_t num_left, size_t num_moves) {
+search solution_t solve(state_t state, uint8_t num_left) {
   if (state.num_occupied <= num_left) {
-    succeed ((solution_t){num_moves, malloc(sizeof(move_t) * num_moves)});
+    succeed ((solution_t){state.num_removed, malloc(sizeof(move_t) * state.num_removed)});
   } else {
     choose move_t move = valid_move(state);
     //print_move(move);
     state_t new_state = make_move(move, state);
     //print_state(new_state);
     
-    choose solution_t solution = solve_help(new_state, num_left, num_moves + 1);
-    solution.moves[num_moves] = move;
+    choose solution_t solution = solve(new_state, num_left);
+    solution.moves[state.num_removed] = move;
     
     succeed solution;
   }
-}
-
-search solution_t solve(state_t state, uint8_t num_left) {
-  choose succeed solve_help(state, num_left, 0);
 }
 
 void delete_solution(solution_t solution) {

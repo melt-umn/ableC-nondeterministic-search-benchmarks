@@ -10,7 +10,7 @@
 state_t init_state(uint8_t edge_size, uint8_t empty_pos) {
   uint8_t size = edge_size * (edge_size + 1) / 2;
   assert(size <= 64);
-  return (state_t){size, size - 1, ~(1ull << empty_pos)};
+  return (state_t){size, size - 1, 0, ~(1ull << empty_pos)};
 }
 
 state_t make_move(move_t move, state_t state) {
@@ -21,7 +21,7 @@ state_t make_move(move_t move, state_t state) {
   assert(!(state.occupied & 1ull << move.to));
   assert(state.occupied & 1ull << move.removed);
   uint64_t occupied = (state.occupied & ~(1ull << move.from | 1ull << move.removed)) | 1ull << move.to;
-  return (state_t){state.size, state.num_occupied - 1, occupied};
+  return (state_t){state.size, state.num_occupied - 1, state.num_removed + 1, occupied};
 }
 
 bool is_occupied(state_t state, uint8_t pos) {
