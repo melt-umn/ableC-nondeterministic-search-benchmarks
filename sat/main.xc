@@ -78,7 +78,7 @@ int main(unsigned argc, char *argv[]) {
     success = invoke(search_sequential_dfs, &assignment, solve(f));
   } else if (!strcmp(driver, "seq")) {
     int depth = 7;
-    if (argc > 5) {
+    if (argc > 3) {
       depth = atoi(argv[3]);
     }
     if (depth < 0) {
