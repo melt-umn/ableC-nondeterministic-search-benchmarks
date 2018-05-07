@@ -22,7 +22,7 @@ try {
   stage ("Test") {
     withEnv(newenv) {
       dir("extensions/ableC-nondeterministic-search-benchmarks") {
-        sh "make clean all"
+        sh "make -j"
       }
     }
   }
