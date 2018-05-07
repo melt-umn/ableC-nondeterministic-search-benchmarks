@@ -7,8 +7,7 @@ library "github.com/melt-umn/jenkins-lib"
 melt.setProperties(silverBase: true, ablecBase: true)
 
 def extension_name = 'ableC-nondeterministic-search-benchmarks'
-def extensions = ['ableC-regex-lib', 'ableC-regex-pattern-matching', 'ableC-cilk', 'ableC-sqlite', 'ableC-condition-tables', 'ableC-algebraic-data-types']
-
+def extensions = ['ableC-nondeterministic-search', 'ableC-closure', 'ableC-refcount-closure']
 node {
 try {
 
