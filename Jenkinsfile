@@ -4,7 +4,7 @@ library "github.com/melt-umn/jenkins-lib"
 
 // This isn't a real extension, so we use a semi-custom approach
 
-melt.setProperties(silverBase: true, ablecBase: true)
+melt.setProperties(silverBase: true, ablecBase: true, silverAblecBase: true)
 
 def extension_name = 'ableC-nondeterministic-search-benchmarks'
 def extensions = ['ableC-nondeterministic-search', 'ableC-closure', 'ableC-refcount-closure']
@@ -16,7 +16,7 @@ try {
   stage ("Checkout") {
     // We'll check it out underneath extensions/ just so we can re-use this code
     // It shouldn't hurt because newenv should specify where extensions and ablec_base can be found
-    newenv = ablec.prepareWorkspace(extension_name, extensions, false)
+    newenv = ablec.prepareWorkspace(extension_name, extensions, true)
   }
 
   stage ("Test") {
