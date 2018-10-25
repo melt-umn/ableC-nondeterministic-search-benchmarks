@@ -1,0 +1,11 @@
+#include <search.xh>
+#include <state.h>
+#include <solver.h>
+
+#ifndef _SOLVER_XH
+#define _SOLVER_XH
+
+search move_t valid_move(state_t state);
+search state_t solve(state_t state);
+
+#endif

@@ -1,0 +1,6 @@
+#include <search.xh>
+
+// Compute a factor of n
+search unsigned long factor(unsigned long n);
+// Compute a factor of n that is not 1 or n
+search unsigned long factor_exclusive(unsigned long n);
