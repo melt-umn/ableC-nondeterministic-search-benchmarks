@@ -12,6 +12,7 @@ search unsigned long factor(unsigned long n) {
     }
   } else {
     choose unsigned long a = ulrange((unsigned long)ceil(sqrt(n)), n);
+    spawn;
     double b = sqrt(a * a - n);
     require b == floor(b);
     choice {
@@ -23,7 +24,7 @@ search unsigned long factor(unsigned long n) {
 
 search unsigned long factor_exclusive(unsigned long n) {
   choose unsigned long f = factor(n);
-  require f > 0;
+  require f > 1;
   require f != n;
   succeed f;
 }

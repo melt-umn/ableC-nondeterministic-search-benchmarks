@@ -7,6 +7,7 @@
 
 search unsigned empty_row(state_t state) {
   choose unsigned row = urange(0, get_size(state));
+  spawn;
   require !row_taken(state, row);
   succeed row;
 }
@@ -14,6 +15,7 @@ search unsigned empty_row(state_t state) {
 search move_t valid_move(state_t state) {
   pick unsigned row = empty_row(state);
   choose unsigned col = urange(0, get_size(state));
+  spawn;
   require !col_taken(state, col);
   require !diag_taken(state, row, col);
   succeed (move_t){row, col};
