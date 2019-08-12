@@ -13,7 +13,7 @@ def extensions = [
   'ableC-refcount-closure',
   'ableC-string',
   'ableC-templating',
-  'ableC-construction',
+  'ableC-constructor',
   'ableC-vector',
   'ableC-algebraic-data-types'
 ]
