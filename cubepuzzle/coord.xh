@@ -1,0 +1,30 @@
+#include <search.xh>
+#include <vector.xh>
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifndef _COORD_H
+#define _COORD_H
+
+typedef struct coord {
+  int8_t x, y, z;
+} coord_t;
+
+typedef datatype transform transform_t;
+
+datatype transform {
+  Direct(gc::closure<(coord_t) -> coord_t> fn);
+  Seq(vector<transform_t> t);
+  Choice(vector<transform_t> t);
+}
+
+vector<vector<coord_t>> apply(transform_t t, vector<coord_t> c);
+
+transform_t id(void);
+transform_t shift(int8_t x, int8_t y, int8_t z);
+transform_t rotate_x(uint8_t n);
+transform_t rotate_y(uint8_t n);
+transform_t rotate_z(uint8_t n);
+
+
+#endif
