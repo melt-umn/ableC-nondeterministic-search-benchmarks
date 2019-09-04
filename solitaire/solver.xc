@@ -79,6 +79,7 @@ search solution_t solve(state_t state, uint8_t num_left) {
     succeed ((solution_t){state.num_removed, malloc(sizeof(move_t) * state.num_removed)});
   } else {
     choose move_t move = valid_move(state);
+    spawn;
     //print_move(move);
     state_t new_state = make_move(move, state);
     //print_state(new_state);

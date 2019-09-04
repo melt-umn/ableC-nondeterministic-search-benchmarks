@@ -181,6 +181,7 @@ search bool *solve_reduced(formula_t formula) {
     // Nondeterministically choose a value to assign by adding a singular clause
     // Prefer assignment of vars predominant quality
     choose bool val = maybe(max_weight > 0);
+    spawn;
     size_t new_size = formula.size + 1;
     refcount_tag_t rt_new_literal, rt_new_clauses;
     literal_t *new_literal = refcount_malloc(sizeof(literal_t), &rt_new_literal);
