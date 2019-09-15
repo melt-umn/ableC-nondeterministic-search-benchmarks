@@ -89,7 +89,7 @@ int main(unsigned argc, char *argv[]) {
     success = invoke(search_parallel_spawn(global_depth, thread_depth, num_threads),
                      &solution, solve(state));
   } else if (!strcmp(driver, "share")) {
-    int global_depth = 0;
+    int global_depth = 2;
     if (argc > 4) {
       global_depth = atoi(argv[4]);
     }
