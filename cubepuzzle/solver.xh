@@ -1,0 +1,45 @@
+#include <search.xh>
+#include <vector.xh>
+#include <coord.xh>
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifndef _SOLVER_XH
+#define _SOLVER_XH
+
+typedef signed __int128 int128_t;
+typedef unsigned __int128 uint128_t;
+
+#define BOX_SIZE 5
+#define PIECE_SIZE 5
+
+#define BOX_VOLUME BOX_SIZE * BOX_SIZE * BOX_SIZE
+#if BOX_VOLUME > 128
+#  error "Box size too large"
+#endif
+
+typedef uint128_t state_t;
+
+static inline bool in_box(coord_t c) {
+  return c.x >= 0 && c.y >= 0 && c.z >= 0 && c.x < BOX_SIZE && c.y < BOX_SIZE && c.z < BOX_SIZE;
+}
+
+static inline uint8_t _index(coord_t c) {
+  return c.x + BOX_SIZE * (c.y + BOX_SIZE * c.z);
+}
+
+static inline bool is_occupied(state_t s, coord_t c) {
+  return (s >> _index(c)) & 1;
+}
+
+static inline state_t occupied(coord_t c) {
+  return ((state_t)1) << _index(c);
+}
+
+void print_state(state_t state);
+
+vector<state_t> get_moves();
+
+search vector<state_t> solve(unsigned num_pieces);
+
+#endif
