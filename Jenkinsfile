@@ -17,9 +17,8 @@ def extensions = [
   'ableC-vector',
   'ableC-algebraic-data-types'
 ]
-node {
-try {
 
+melt.trynode(extension_name) {
   def newenv
 
   stage ("Checkout") {
@@ -39,11 +38,4 @@ try {
   /* If we've gotten all this way with a successful build, don't take up disk space */
   sh "rm -rf generated/* || true"
 }
-catch (e) {
-  melt.handle(e)
-}
-finally {
-  melt.notify(job: extension_name)
-}
-} // node
 
