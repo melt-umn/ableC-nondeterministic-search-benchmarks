@@ -19,9 +19,15 @@ parser extendedParser :: cst:Root {
   edu:umn:cs:melt:exts:ableC:algebraicDataTypes;
   
   prefer edu:umn:cs:melt:exts:ableC:refCountClosure:concretesyntax:typeExpr:Closure_t
-    over edu:umn:cs:melt:exts:ableC:closure:concretesyntax:typeExpr:Closure_t;
+    over edu:umn:cs:melt:exts:ableC:closure:concretesyntax:typeExpr:Closure_t,
+         edu:umn:cs:melt:ableC:concretesyntax:Identifier_t,
+         edu:umn:cs:melt:ableC:concretesyntax:TypeName_t,
+         edu:umn:cs:melt:exts:ableC:templating:concretesyntax:instantiationTypeExpr:TemplateTypeName_t;
   prefer edu:umn:cs:melt:exts:ableC:refCountClosure:concretesyntax:lambdaExpr:Lambda_t
-    over edu:umn:cs:melt:exts:ableC:closure:concretesyntax:lambdaExpr:Lambda_t;
+    over edu:umn:cs:melt:exts:ableC:closure:concretesyntax:lambdaExpr:Lambda_t,
+         edu:umn:cs:melt:ableC:concretesyntax:Identifier_t,
+         edu:umn:cs:melt:ableC:concretesyntax:TypeName_t,
+         edu:umn:cs:melt:exts:ableC:templating:concretesyntax:instantiationExpr:TemplateIdentifier_t;
 } 
 
 function main
