@@ -7,10 +7,18 @@ library "github.com/melt-umn/jenkins-lib"
 melt.setProperties(silverBase: true, ablecBase: true, silverAblecBase: true)
 
 def extension_name = 'ableC-nondeterministic-search-benchmarks'
-def extensions = ['ableC-nondeterministic-search', 'ableC-closure', 'ableC-refcount-closure']
-node {
-try {
+def extensions = [
+  'ableC-nondeterministic-search',
+  'ableC-closure',
+  'ableC-refcount-closure',
+  'ableC-string',
+  'ableC-templating',
+  'ableC-constructor',
+  'ableC-vector',
+  'ableC-algebraic-data-types'
+]
 
+melt.trynode(extension_name) {
   def newenv
 
   stage ("Checkout") {
@@ -30,11 +38,4 @@ try {
   /* If we've gotten all this way with a successful build, don't take up disk space */
   sh "rm -rf generated/* || true"
 }
-catch (e) {
-  melt.handle(e)
-}
-finally {
-  melt.notify(job: extension_name)
-}
-} // node
 
